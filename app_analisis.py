@@ -162,7 +162,7 @@ if df is not None:
                     f"{stats_temp['75%']:.2f}"
                 ]
             })
-            st.dataframe(stats_df_temp, use_container_width=True, hide_index=True)
+            st.dataframe(stats_df_temp, width='stretch', hide_index=True)
         
         with col2:
             st.subheader("📊 Estadísticas de Presión")
@@ -180,7 +180,7 @@ if df is not None:
                     f"{stats_presion['75%']:.3f}"
                 ]
             })
-            st.dataframe(stats_df_presion, use_container_width=True, hide_index=True)
+            st.dataframe(stats_df_presion, width='stretch', hide_index=True)
         
         st.markdown("---")
         
@@ -198,7 +198,7 @@ if df is not None:
             color_discrete_sequence=px.colors.qualitative.Set3
         )
         fig_pie.update_traces(textposition='inside', textinfo='percent+label+value')
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch')
     
     # TAB 2: SERIES TEMPORALES
     with tab2:
@@ -225,7 +225,7 @@ if df is not None:
             hovermode='x unified',
             height=400
         )
-        st.plotly_chart(fig_temp, use_container_width=True)
+        st.plotly_chart(fig_temp, width='stretch')
         
         # Gráfico de presión en el tiempo
         st.subheader("⚡ Presión Interna en el Tiempo")
@@ -248,7 +248,7 @@ if df is not None:
             hovermode='x unified',
             height=400
         )
-        st.plotly_chart(fig_presion, use_container_width=True)
+        st.plotly_chart(fig_presion, width='stretch')
         
         # Gráfico combinado con subplots
         st.subheader("📊 Vista Combinada: Temperatura y Presión")
@@ -278,7 +278,7 @@ if df is not None:
         fig_combined.update_yaxes(title_text="Presión (bar)", row=2, col=1)
         fig_combined.update_layout(height=700, showlegend=True)
         
-        st.plotly_chart(fig_combined, use_container_width=True)
+        st.plotly_chart(fig_combined, width='stretch')
     
     # TAB 3: DISTRIBUCIONES
     with tab3:
@@ -298,7 +298,7 @@ if df is not None:
                 labels={'temperatura': 'Temperatura (°C)', 'estado_compresor': 'Estado'},
                 marginal='box'
             )
-            st.plotly_chart(fig_hist_temp, use_container_width=True)
+            st.plotly_chart(fig_hist_temp, width='stretch')
             
             # Box plot de temperatura
             st.subheader("📦 Box Plot de Temperatura")
@@ -310,7 +310,7 @@ if df is not None:
                 title='Distribución de Temperatura por Estado',
                 labels={'temperatura': 'Temperatura (°C)', 'estado_compresor': 'Estado'}
             )
-            st.plotly_chart(fig_box_temp, use_container_width=True)
+            st.plotly_chart(fig_box_temp, width='stretch')
         
         with col2:
             # Histograma de presión
@@ -324,7 +324,7 @@ if df is not None:
                 labels={'presion': 'Presión (bar)', 'estado_compresor': 'Estado'},
                 marginal='box'
             )
-            st.plotly_chart(fig_hist_presion, use_container_width=True)
+            st.plotly_chart(fig_hist_presion, width='stretch')
             
             # Box plot de presión
             st.subheader("📦 Box Plot de Presión")
@@ -336,7 +336,7 @@ if df is not None:
                 title='Distribución de Presión por Estado',
                 labels={'presion': 'Presión (bar)', 'estado_compresor': 'Estado'}
             )
-            st.plotly_chart(fig_box_presion, use_container_width=True)
+            st.plotly_chart(fig_box_presion, width='stretch')
         
         # Violin plots
         st.markdown("---")
@@ -354,7 +354,7 @@ if df is not None:
                 title='Violin Plot - Temperatura',
                 labels={'temperatura': 'Temperatura (°C)', 'estado_compresor': 'Estado'}
             )
-            st.plotly_chart(fig_violin_temp, use_container_width=True)
+            st.plotly_chart(fig_violin_temp, width='stretch')
         
         with col2:
             fig_violin_presion = px.violin(
@@ -366,7 +366,7 @@ if df is not None:
                 title='Violin Plot - Presión',
                 labels={'presion': 'Presión (bar)', 'estado_compresor': 'Estado'}
             )
-            st.plotly_chart(fig_violin_presion, use_container_width=True)
+            st.plotly_chart(fig_violin_presion, width='stretch')
     
     # TAB 4: CORRELACIONES
     with tab4:
@@ -385,7 +385,7 @@ if df is not None:
             opacity=0.6,
             trendline='ols'
         )
-        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.plotly_chart(fig_scatter, width='stretch')
         
         # Matriz de correlación
         st.subheader("📊 Matriz de Correlación")
@@ -413,7 +413,7 @@ if df is not None:
                 title='Matriz de Correlación',
                 height=400
             )
-            st.plotly_chart(fig_corr, use_container_width=True)
+            st.plotly_chart(fig_corr, width='stretch')
         
         with col2:
             st.markdown("### Interpretación")
@@ -493,7 +493,7 @@ if df is not None:
         
         st.dataframe(
             df_mostrar[['fecha_hora', 'estado_compresor', 'temperatura', 'presion']],
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
         
@@ -513,7 +513,7 @@ if df is not None:
         st.markdown("---")
         st.subheader("📊 Estadísticas Completas")
         
-        st.dataframe(df_filtrado[['temperatura', 'presion']].describe(), use_container_width=True)
+        st.dataframe(df_filtrado[['temperatura', 'presion']].describe(), width='stretch')
 
 else:
     # Mensaje cuando no hay datos cargados
