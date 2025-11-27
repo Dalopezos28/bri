@@ -92,11 +92,12 @@ if df is not None:
     ]
     
     # Tabs para organizar el contenido
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📈 Resumen General", 
         "📉 Series Temporales", 
         "📊 Distribuciones",
         "🔄 Correlaciones",
+        "🎯 Análisis Cruzado",
         "📋 Datos Detallados"
     ])
     
@@ -449,8 +450,257 @@ if df is not None:
             with cols[idx]:
                 st.metric(f"Estado {estado}", f"{corr_estado:.3f}")
     
-    # TAB 5: DATOS DETALLADOS
+    # TAB 5: ANÁLISIS CRUZADO
     with tab5:
+        st.header("Análisis Cruzado de las 4 Variables")
+        st.markdown("Visualizaciones que cruzan **Tiempo, Temperatura, Presión y Estado** simultáneamente")
+        
+        # Gráfico 3D interactivo
+        st.subheader("🎲 Visualización 3D: Tiempo, Temperatura y Presión por Estado")
+        
+        # Preparar datos para el gráfico 3D
+        df_3d = df_filtrado.copy()
+        df_3d['minutos_desde_inicio'] = (df_3d['fecha_hora'] - df_3d['fecha_hora'].min()).dt.total_seconds() / 60
+        
+        fig_3d = go.Figure()
+        
+        for estado in sorted(df_filtrado['estado_compresor'].unique()):
+            df_estado = df_3d[df_3d['estado_compresor'] == estado]
+            fig_3d.add_trace(go.Scatter3d(
+                x=df_estado['minutos_desde_inicio'],
+                y=df_estado['temperatura'],
+                z=df_estado['presion'],
+                mode='markers',
+                name=f'Estado {estado}',
+                marker=dict(
+                    size=3,
+                    opacity=0.6,
+                    color=df_estado['temperatura'],
+                    colorscale='Viridis',
+                    showscale=True if estado == sorted(df_filtrado['estado_compresor'].unique())[0] else False,
+                    colorbar=dict(title="Temp (°C)")
+                ),
+                text=[f"Tiempo: {t.strftime('%Y-%m-%d %H:%M')}<br>Estado: {e}<br>Temp: {temp:.1f}°C<br>Presión: {p:.2f} bar"
+                      for t, e, temp, p in zip(df_estado['fecha_hora'], df_estado['estado_compresor'], 
+                                                df_estado['temperatura'], df_estado['presion'])],
+                hoverinfo='text'
+            ))
+        
+        fig_3d.update_layout(
+            scene=dict(
+                xaxis_title='Tiempo (minutos desde inicio)',
+                yaxis_title='Temperatura (°C)',
+                zaxis_title='Presión (bar)',
+                camera=dict(
+                    eye=dict(x=1.5, y=1.5, z=1.3)
+                )
+            ),
+            height=600,
+            showlegend=True
+        )
+        st.plotly_chart(fig_3d, width='stretch')
+        
+        st.markdown("---")
+        
+        # Heatmap de correlación temporal
+        st.subheader("🔥 Mapa de Calor: Temperatura vs Presión en el Tiempo")
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Crear bins de tiempo y calcular promedios
+            df_heatmap = df_filtrado.copy()
+            df_heatmap['hora_del_dia'] = df_heatmap['fecha_hora'].dt.hour + df_heatmap['fecha_hora'].dt.minute / 60
+            
+            # Crear bins para temperatura y presión
+            temp_bins = pd.cut(df_heatmap['temperatura'], bins=20)
+            presion_bins = pd.cut(df_heatmap['presion'], bins=20)
+            
+            # Contar ocurrencias
+            heatmap_data = df_heatmap.groupby([temp_bins, presion_bins]).size().reset_index(name='count')
+            heatmap_data['temp_mid'] = heatmap_data[heatmap_data.columns[0]].apply(lambda x: x.mid)
+            heatmap_data['presion_mid'] = heatmap_data[heatmap_data.columns[1]].apply(lambda x: x.mid)
+            
+            # Crear pivot table
+            pivot = heatmap_data.pivot_table(values='count', index='temp_mid', columns='presion_mid', fill_value=0)
+            
+            fig_heatmap = go.Figure(data=go.Heatmap(
+                z=pivot.values,
+                x=pivot.columns,
+                y=pivot.index,
+                colorscale='YlOrRd',
+                colorbar=dict(title='Frecuencia')
+            ))
+            
+            fig_heatmap.update_layout(
+                xaxis_title='Presión (bar)',
+                yaxis_title='Temperatura (°C)',
+                height=500
+            )
+            st.plotly_chart(fig_heatmap, width='stretch')
+        
+        with col2:
+            st.markdown("### 📊 Interpretación")
+            st.markdown("""
+            Este mapa de calor muestra:
+            
+            - **Zonas rojas**: Combinaciones más frecuentes de temperatura y presión
+            - **Zonas amarillas**: Combinaciones moderadamente frecuentes
+            - **Zonas oscuras**: Combinaciones raras o inexistentes
+            
+            Identifica los puntos de operación típicos del compresor.
+            """)
+        
+        st.markdown("---")
+        
+        # Gráfico de burbujas: 4 variables en 2D
+        st.subheader("🫧 Gráfico de Burbujas: Las 4 Variables en una Vista")
+        
+        # Muestreo para mejor rendimiento si hay muchos datos
+        df_sample = df_filtrado if len(df_filtrado) < 5000 else df_filtrado.sample(5000)
+        df_sample = df_sample.copy()
+        df_sample['minutos'] = (df_sample['fecha_hora'] - df_sample['fecha_hora'].min()).dt.total_seconds() / 60
+        
+        fig_bubble = px.scatter(
+            df_sample,
+            x='temperatura',
+            y='presion',
+            size='minutos',
+            color='estado_compresor',
+            title='Temperatura vs Presión (Tamaño = Tiempo, Color = Estado)',
+            labels={
+                'temperatura': 'Temperatura (°C)',
+                'presion': 'Presión (bar)',
+                'estado_compresor': 'Estado',
+                'minutos': 'Minutos'
+            },
+            hover_data=['fecha_hora'],
+            size_max=15
+        )
+        
+        fig_bubble.update_layout(height=500)
+        st.plotly_chart(fig_bubble, width='stretch')
+        
+        st.info("💡 **Leyenda:** El tamaño de las burbujas representa el tiempo transcurrido y el color representa el estado del compresor")
+        
+        st.markdown("---")
+        
+        # Análisis por franjas horarias
+        st.subheader("⏰ Análisis por Franjas Horarias")
+        
+        df_horario = df_filtrado.copy()
+        df_horario['hora'] = df_horario['fecha_hora'].dt.hour
+        
+        # Definir franjas horarias
+        def clasificar_franja(hora):
+            if 0 <= hora < 6:
+                return '🌙 Madrugada (00:00-06:00)'
+            elif 6 <= hora < 12:
+                return '🌅 Mañana (06:00-12:00)'
+            elif 12 <= hora < 18:
+                return '☀️ Tarde (12:00-18:00)'
+            else:
+                return '🌆 Noche (18:00-00:00)'
+        
+        df_horario['franja'] = df_horario['hora'].apply(clasificar_franja)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Temperatura promedio por franja y estado
+            temp_franja = df_horario.groupby(['franja', 'estado_compresor'])['temperatura'].mean().reset_index()
+            
+            fig_temp_franja = px.bar(
+                temp_franja,
+                x='franja',
+                y='temperatura',
+                color='estado_compresor',
+                barmode='group',
+                title='Temperatura Promedio por Franja Horaria y Estado',
+                labels={'temperatura': 'Temperatura (°C)', 'franja': 'Franja Horaria', 'estado_compresor': 'Estado'}
+            )
+            st.plotly_chart(fig_temp_franja, width='stretch')
+        
+        with col2:
+            # Presión promedio por franja y estado
+            presion_franja = df_horario.groupby(['franja', 'estado_compresor'])['presion'].mean().reset_index()
+            
+            fig_presion_franja = px.bar(
+                presion_franja,
+                x='franja',
+                y='presion',
+                color='estado_compresor',
+                barmode='group',
+                title='Presión Promedia por Franja Horaria y Estado',
+                labels={'presion': 'Presión (bar)', 'franja': 'Franja Horaria', 'estado_compresor': 'Estado'}
+            )
+            st.plotly_chart(fig_presion_franja, width='stretch')
+        
+        st.markdown("---")
+        
+        # Tabla resumen cruzada
+        st.subheader("📊 Tabla Resumen: Estadísticas Cruzadas por Estado")
+        
+        resumen_cruzado = df_filtrado.groupby('estado_compresor').agg({
+            'temperatura': ['mean', 'min', 'max', 'std'],
+            'presion': ['mean', 'min', 'max', 'std'],
+            'fecha_hora': 'count'
+        }).round(2)
+        
+        resumen_cruzado.columns = [
+            'Temp Media (°C)', 'Temp Mín (°C)', 'Temp Máx (°C)', 'Temp Desv.Est',
+            'Presión Media (bar)', 'Presión Mín (bar)', 'Presión Máx (bar)', 'Presión Desv.Est',
+            'Num. Registros'
+        ]
+        
+        st.dataframe(resumen_cruzado, width='stretch')
+        
+        # Gráfico de líneas múltiples con ejes duales
+        st.markdown("---")
+        st.subheader("📈 Serie Temporal con Ejes Duales")
+        
+        # Crear submuestra para mejor visualización
+        step = max(1, len(df_filtrado) // 1000)  # Máximo 1000 puntos
+        df_dual = df_filtrado.iloc[::step].copy()
+        
+        fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # Agregar temperatura
+        fig_dual.add_trace(
+            go.Scatter(x=df_dual['fecha_hora'], y=df_dual['temperatura'],
+                      name="Temperatura", line=dict(color='red', width=2)),
+            secondary_y=False
+        )
+        
+        # Agregar presión
+        fig_dual.add_trace(
+            go.Scatter(x=df_dual['fecha_hora'], y=df_dual['presion'],
+                      name="Presión", line=dict(color='blue', width=2)),
+            secondary_y=True
+        )
+        
+        # Agregar marcadores de estado
+        for estado in sorted(df_dual['estado_compresor'].unique()):
+            df_estado = df_dual[df_dual['estado_compresor'] == estado]
+            fig_dual.add_trace(
+                go.Scatter(x=df_estado['fecha_hora'], 
+                          y=df_estado['temperatura'],
+                          mode='markers',
+                          name=f'Estado {estado}',
+                          marker=dict(size=4, opacity=0.5),
+                          showlegend=True),
+                secondary_y=False
+            )
+        
+        fig_dual.update_xaxes(title_text="Tiempo")
+        fig_dual.update_yaxes(title_text="Temperatura (°C)", secondary_y=False)
+        fig_dual.update_yaxes(title_text="Presión (bar)", secondary_y=True)
+        fig_dual.update_layout(height=500, hovermode='x unified')
+        
+        st.plotly_chart(fig_dual, width='stretch')
+    
+    # TAB 6: DATOS DETALLADOS
+    with tab6:
         st.header("Datos Detallados")
         
         # Mostrar información del dataset
